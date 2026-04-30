@@ -31,6 +31,12 @@ parent split -> child split
 with edge weights = number of runs showing that transition.
 
 This is a much better aggregate representation of tree behavior.
+
+From src/:
+
+    python analyze_splits.py \
+        --input_jsonl ../temp/batch_runs.jsonl \
+        --out_dir ../temp/analysis
 """
 
 from __future__ import annotations

@@ -1,117 +1,168 @@
 """
 single_child_growth.py
 
-Run the same baseline ATP procedure over multiple growth files
-for a single child.
+Run the one-file ATP baseline across multiple lexicon sizes for ONE child.
 
-Architecture:
-This script intentionally reuses baseline_run.run_one_file()
-rather than duplicating ATP loading/training/summary logic.
-    - baseline_run.py is the single source of truth for one-file runs
-    - this script loops over growth sizes
+For one simulated child, do exact productive ATP rule paths persist, disappear,
+or change as the lexicon grows?
 
-From src/:
+Outputs:
+1. single_child_summary.csv
+   One row per lexicon size.
 
-    python single_child_growth.py \
-        --root ../data/english/growth \
-        --child 0 \
-        --sizes 50 100 150 200 500 1000 \
-        --sep " " \
-        --use_ipa true \
-        --out_jsonl ../temp/child0_growth.jsonl \
-        --save_trees true \
-        --tree_dir ../temp/child0_trees
+2. single_child_leaf_paths.csv
+   One row per ATP leaf, productive or nonproductive.
+
+3. single_child_productive_rules.csv
+   One row per productive ATP leaf.
+
+Example run:
+from src
+python single_child_growth.py \
+  --root ../data/english/growth \
+  --child 4 \
+  --sizes 50 100 200 500 1000 \
+  --sep " " \
+  --use_ipa true \
+  --out_dir ../temp/single_child_rule_paths \
+  --save_trees true
 """
 
 from __future__ import annotations
 
 import argparse
-import json
+import csv
 import os
+from typing import Dict, List
 
 from baseline_run import run_one_file, str2bool
 
 
+def write_csv(path: str, rows: List[Dict], fieldnames: List[str]) -> None:
+    """Write rows to a CSV file, creating the output directory if needed."""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+
+    with open(path, "w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def leaf_to_row(child_id: int, size: int, leaf_index: int, leaf: Dict) -> Dict:
+    """Convert one leaf dictionary from baseline_run.py into a flat CSV row."""
+    return {
+        "child_id": child_id,
+        "lexicon_size": size,
+        "leaf_index": leaf_index,
+        "productive": leaf["productive"],
+        "depth": leaf["depth"],
+        "conditions": leaf["conditions"],
+        "rule": leaf["rule"],
+        "rule_signature": leaf["rule_signature"],
+        "path_ordered": " > ".join(leaf["path"]),
+        "leaf_name": leaf["leaf_name"],
+    }
+
+
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Run baseline ATP over multiple growth sizes for one child."
-    )
-    parser.add_argument("--root", required=True, help="Path to english growth root directory.")
-    parser.add_argument("--child", type=int, required=True, help="Child ID to analyze.")
-    parser.add_argument(
-        "--sizes",
-        nargs="+",
-        type=int,
-        required=True,
-        help="Growth sizes to run, e.g. 50 100 150 200 500 1000",
-    )
-    parser.add_argument("--sep", default=" ", help="Separator for load_pairs().")
-    parser.add_argument(
-        "--use_ipa",
-        type=str2bool,
-        default=True,
-        help="Whether to convert orthography to IPA.",
-    )
-    parser.add_argument(
-        "--out_jsonl",
-        default="../temp/single_child_growth.jsonl",
-        help="Path to JSONL summary output.",
-    )
-    parser.add_argument(
-        "--save_trees",
-        type=str2bool,
-        default=True,
-        help="Whether to save one PDF tree per growth size.",
-    )
-    parser.add_argument(
-        "--tree_dir",
-        default="../temp/single_child_trees",
-        help="Directory for saved tree PDFs.",
-    )
+    parser = argparse.ArgumentParser(description="Run ATP for one child across lexicon sizes.")
+    parser.add_argument("--root", required=True)
+    parser.add_argument("--child", type=int, required=True)
+    parser.add_argument("--sizes", nargs="+", type=int, required=True)
+    parser.add_argument("--sep", default=" ")
+    parser.add_argument("--use_ipa", type=str2bool, default=True)
+    parser.add_argument("--out_dir", default="../temp/single_child_rule_paths")
+    parser.add_argument("--save_trees", type=str2bool, default=False)
+    parser.add_argument("--tree_dir", default="../temp/single_child_trees")
+
     args = parser.parse_args()
 
-    os.makedirs(os.path.dirname(args.out_jsonl), exist_ok=True)
+    os.makedirs(args.out_dir, exist_ok=True)
+
     if args.save_trees:
         os.makedirs(args.tree_dir, exist_ok=True)
 
-    run_count = 0
+    summary_rows: List[Dict] = []
+    leaf_rows: List[Dict] = []
+    productive_rows: List[Dict] = []
 
-    with open(args.out_jsonl, "w", encoding="utf-8") as out_f:
-        for growth_size in args.sizes:
-            input_path = os.path.join(
-                args.root,
-                f"child-{args.child}",
-                f"{growth_size}.txt",
-            )
+    for size in args.sizes:
+        input_path = os.path.join(args.root, f"child-{args.child}", f"{size}.txt")
 
-            if not os.path.exists(input_path):
-                print(f"Skipping missing file: {input_path}")
-                continue
+        if not os.path.exists(input_path):
+            print(f"Skipping missing file: {input_path}")
+            continue
 
-            tree_out = None
-            if args.save_trees:
-                tree_out = os.path.join(args.tree_dir, f"child{args.child}_{growth_size}")
+        tree_out = None
+        if args.save_trees:
+            tree_out = os.path.join(args.tree_dir, f"child{args.child}_{size}")
 
-            summary = run_one_file(
-                input_path=input_path,
-                sep=args.sep,
-                use_ipa=args.use_ipa,
-                tree_out=tree_out,
-                open_pdf=False,
-            )
+        summary = run_one_file(
+            input_path=input_path,
+            sep=args.sep,
+            use_ipa=args.use_ipa,
+            tree_out=tree_out,
+            child_id=args.child,
+            lexicon_size=size,
+        )
 
-            out_f.write(json.dumps(summary, ensure_ascii=False) + "\n")
-            run_count += 1
+        summary_rows.append(
+            {
+                "child_id": args.child,
+                "lexicon_size": size,
+                "input_path": input_path,
+                "num_leaves": summary["num_leaves"],
+                "num_productive_leaves": summary["num_productive_leaves"],
+                "num_nonproductive_leaves": summary["num_nonproductive_leaves"],
+                "tree_depth": summary["tree_depth"],
+                "tree_pdf": summary["tree_pdf"],
+            }
+        )
 
-            print(
-                f"Finished child-{args.child} size={growth_size} | "
-                f"pairs={summary['num_pairs']} | "
-                f"leaves={summary['num_leaves']} | "
-                f"depth={summary['tree_depth']} | "
-                f"first_split={summary['first_split']}"
-            )
+        for i, leaf in enumerate(summary["leaf_paths"]):
+            row = leaf_to_row(args.child, size, i, leaf)
+            leaf_rows.append(row)
 
-    print(f"\nSaved {run_count} summaries to: {args.out_jsonl}")
+            if leaf["productive"]:
+                productive_rows.append(row)
+
+        print(
+            f"Finished child-{args.child} size={size} | "
+            f"leaves={summary['num_leaves']} | "
+            f"productive={summary['num_productive_leaves']} | "
+            f"nonproductive={summary['num_nonproductive_leaves']} | "
+            f"depth={summary['tree_depth']}"
+        )
+
+    summary_fields = [
+        "child_id",
+        "lexicon_size",
+        "input_path",
+        "num_leaves",
+        "num_productive_leaves",
+        "num_nonproductive_leaves",
+        "tree_depth",
+        "tree_pdf",
+    ]
+
+    leaf_fields = [
+        "child_id",
+        "lexicon_size",
+        "leaf_index",
+        "productive",
+        "depth",
+        "conditions",
+        "rule",
+        "rule_signature",
+        "path_ordered",
+        "leaf_name",
+    ]
+
+    write_csv(os.path.join(args.out_dir, "single_child_summary.csv"), summary_rows, summary_fields)
+    write_csv(os.path.join(args.out_dir, "single_child_leaf_paths.csv"), leaf_rows, leaf_fields)
+    write_csv(os.path.join(args.out_dir, "single_child_productive_rules.csv"), productive_rows, leaf_fields)
+
+    print(f"\nSaved single-child outputs to: {args.out_dir}")
 
 
 if __name__ == "__main__":

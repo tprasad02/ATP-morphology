@@ -2,6 +2,7 @@
 baseline_run.py
 
 Run ATP on one lexicon and extract learned rule paths.
+Baseline run used for all other analysis files.
 
 Outputs:
 - baseline_summary.json

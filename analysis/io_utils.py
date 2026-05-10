@@ -13,14 +13,12 @@ from typing import Any, Dict, List
 
 
 def ensure_parent_dir(path: str) -> None:
-    """Create a file's parent directory if needed."""
     parent = Path(path).parent
     if str(parent) != ".":
         parent.mkdir(parents=True, exist_ok=True)
 
 
 def write_json(path: str, data: Dict[str, Any]) -> None:
-    """Write a dictionary to JSON."""
     ensure_parent_dir(path)
 
     with open(path, "w", encoding="utf-8") as f:
@@ -28,7 +26,6 @@ def write_json(path: str, data: Dict[str, Any]) -> None:
 
 
 def write_csv(path: str, rows: List[Dict[str, Any]], fieldnames: List[str]) -> None:
-    """Write rows to CSV. If rows is empty, still write the header."""
     ensure_parent_dir(path)
 
     with open(path, "w", encoding="utf-8", newline="") as f:

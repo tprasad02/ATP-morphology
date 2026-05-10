@@ -15,9 +15,9 @@ Outputs:
 
 Example:
 PYTHONPATH=src python analysis/analyze_rules.py \
-  --summary_csv temp/batch_rule_paths_100children/batch_summary.csv \
-  --rules_csv temp/batch_rule_paths_100children/batch_rules.csv \
-  --out_dir temp/rule_analysis_100children \
+  --summary_csv temp/batch_rule_paths/batch_summary.csv \
+  --rules_csv temp/batch_rule_paths/batch_rules.csv \
+  --out_dir temp/rule_analysis_5children \
   --interesting_threshold 0.3
 """
 
@@ -312,8 +312,6 @@ def main() -> None:
     )
 
     print(f"Saved rule-path analysis to: {args.out_dir}")
-    print("Most useful file first:")
-    print(os.path.join(args.out_dir, "rule_path_analysis_summary.txt"))
 
 
 if __name__ == "__main__":

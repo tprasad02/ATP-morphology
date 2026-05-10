@@ -107,6 +107,7 @@ PYTHONPATH=src python analysis/baseline_run.py \
   --use_ipa true \
   --tree_out temp/child0_500 \
   --open_pdf false
+
 2. Single-child growth
 PYTHONPATH=src python analysis/single_child_growth.py \
   --root data/english/growth \
@@ -116,6 +117,7 @@ PYTHONPATH=src python analysis/single_child_growth.py \
   --out_dir temp/single_child_rule_paths \
   --save_trees true \
   --tree_dir temp/single_child_trees
+
 3. Batch run across children (main experiment)
 
 Example with 5 children:
@@ -137,6 +139,7 @@ PYTHONPATH=src python analysis/batch_run_atp.py \
   --use_ipa true \
   --out_dir temp/batch_rule_paths_100children \
   --save_trees false
+
 4. Analyze results
 PYTHONPATH=src python analysis/analyze_rules.py \
   --summary_csv temp/batch_rule_paths_100children/batch_summary.csv \
@@ -151,8 +154,11 @@ PYTHONPATH=src python analysis/analyze_rules.py \
 After running the analysis:
 
 temp/rule_analysis_100children/rule_path_analysis_summary.txt
+
 temp/rule_analysis_100children/complexity_by_size.csv
+
 temp/rule_analysis_100children/within_child_rule_overlap.csv
+
 temp/rule_analysis_100children/cross_child_rule_recurrence.csv
 
 ---
@@ -168,8 +174,8 @@ temp/rule_analysis_100children/cross_child_rule_recurrence.csv
 ## Summary
 
 This project shows that ATP rule learning is:
-- unstable at early lexicon sizes
-- more complex at intermediate stages
-- simpler and more general at larger sizes
+- Unstable at early lexicon sizes
+- More complex at intermediate stages
+- Simpler and more general at larger sizes
 
 Differences between learners largely reflect differences in input data rather than differences in the learning process.
